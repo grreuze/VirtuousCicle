@@ -41,7 +41,7 @@ public class SC_PlayerHuman : MonoBehaviour {
 
     void Update()
     {
-        if (Input.GetButtonDown("Jump") && isGrounded && !isUnderwater)
+        if (Input.GetButtonDown("Jump2") && isGrounded && !isUnderwater)
         {
             Jump();
         }
@@ -61,8 +61,8 @@ public class SC_PlayerHuman : MonoBehaviour {
             if (speed > minSpeed)
             {
                 speed = speed - (speedLossInWater * Time.deltaTime);
-                Debug.Log("speed" + speed);
-                Debug.Log("speedLoss" + speedLossInWater * Time.deltaTime);
+                //Debug.Log("speed" + speed);
+                //Debug.Log("speedLoss" + speedLossInWater * Time.deltaTime);
             }
             else
             {
@@ -71,41 +71,77 @@ public class SC_PlayerHuman : MonoBehaviour {
         }
 
         //Debug.Log(Input.GetAxisRaw("Horizontal"));
-        Vector3 movement = new Vector3(Input.GetAxis("Horizontal"), 0, 0);
+        Vector3 movement = new Vector3(Input.GetAxis("Horizontal2"), 0, 0);
         gameObject.transform.position += movement * speed * Time.deltaTime;
     }
 
 
 
+//Fonctions
     void Jump()
     {
-        Vector3 jumpDirection = new Vector3(0, 100 * jumpHeight, 0);
+        //Vector3 jumpDirection = new Vector3(0, 100 * jumpHeight, 0);
+		//rb.AddForce(jumpDirection);
         rb.AddForce(0, 100 * jumpHeight, 0);
         isGrounded = false;
-        //rb.AddForce(jumpDirection);
     }
 
 
-    //Détection du sol
-    private void OnTriggerEnter(Collider c)
+
+//Détection des collisions & stuff
+    private void OnTriggerEnter(Collider c) //trigger "aux pieds"
     {
-        Debug.Log(c.gameObject.tag);
-        if (c.gameObject.tag == "Ground")
+        //Debug.Log(c.gameObject.tag);
+        if (c.gameObject.tag == "Ground") //en contact avec le sol
         {
             isGrounded = true;
         }
-        else
+		else if (c.gameObject.tag == "Water") //entre dans l'eau
         {
-            isGrounded = false;
+			isUnderwater = true;
+            speed = maxSpeedUnderwater;
+			//isGrounded = false;
         }
     }
 
     private void OnTriggerExit(Collider c)
     {
-        Debug.Log("Im outta here");
-        if (c.gameObject.tag == "Ground")
+        //Debug.Log("Im outta " + c.gameObject.tag);
+        if (c.gameObject.tag == "Ground") //n'est plus en contact avec le sol
         {
             isGrounded = false;
+        }
+		else if (c.gameObject.tag == "Water") //sortie de l'eau
+        {
+			isUnderwater = false;
+			speed = maxSpeed;
+		}
+    }
+
+
+
+    //Détection des objets collisionnés
+    private void OnCollisionEnter(Collision collision)
+    {
+        GameObject collidedObj = collision.gameObject;
+        Debug.Log(collidedObj);
+        if (collision.gameObject.name.Contains("Item"))
+        {
+            if (collision.gameObject.tag == "IAir")
+            {
+                speed = maxSpeedUnderwater;
+                Destroy(collision.gameObject);
+            }
+        }
+        else if (collidedObj.name.Contains("Otter")) //WIP
+        {
+            Debug.Log(collidedObj.GetComponentInChildren<GameObject>().tag);
+
+            //GameObject OtterChild = collidedObj
+            /*if (collidedObj.GetComponentInChildren<GameObject>().tag == "IAir")
+            {
+                Debug.Log("that'll do it");
+            }*/
         }
     }
 }
