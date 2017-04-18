@@ -18,7 +18,7 @@ public class SC_MultiTargetCamera : MonoBehaviour {
     void Update() {
         
         Vector3 camPos = (targets[1].position + targets[0].position) / 2 + offset;
-        my.LookAt(camPos);
+        //my.LookAt(camPos);
 
         currentDistance = distance.Clamp(Vector3.Distance(targets[0].position, targets[1].position) * distanceModifier);
 
