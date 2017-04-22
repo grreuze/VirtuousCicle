@@ -4,12 +4,13 @@ using UnityEngine.UI;
 using UnityEngine;
 
 public class SC_PlayerHuman : MonoBehaviour {
-
+    
     //Variables de déplacement
     float speed = 1; //vitesse de déplacement à l'instant
     public float maxSpeed; //vitesse maximale de déplacement
     public float maxSpeedUnderwater; //vitesse maximale de déplacement sous l'eau
     public float minSpeed; //vitesse minimale de déplacement
+    public float climbSpeedReducCoeff = 1; //par combien est divisiée la vitesse en escalade
     float airStock = 100; //pourcentage d'air restant au personnage
     public float airPercentLoss; //pourcentage d'air perdu à chaque frame
     public AnimationCurve speedLossFromAir; //tableau de la perte de vitesse en fonction de l'air restant
@@ -18,12 +19,13 @@ public class SC_PlayerHuman : MonoBehaviour {
 
     //Variables d'état
     bool isUnderwater; //vrai si le personnage est sous la surface, faux s'il est au-dessus
-    bool canClimb; //si le personnage peut escalader une échelle
+    bool canMove;
+    public bool canClimb; //si le personnage peut escalader une échelle
+    public bool climbing; //si le personnage est en train de monter le long d'une échelle
 
     //Autre variables
     Rigidbody rb; //rigidbody de l'acteur
     Collider coll; //collider de l'acteur
-
     GameObject airGauge; 
     Slider airSlider; //jauge d'oxygène
     Transform sliderFill; //référence au "fill" du slider
@@ -36,7 +38,7 @@ public class SC_PlayerHuman : MonoBehaviour {
     {
         rb = GetComponent<Rigidbody>();
         coll = GetComponent<Collider>();
-
+        canMove = true;
         if (isUnderwater)
         {
             speed = maxSpeedUnderwater;
@@ -51,32 +53,50 @@ public class SC_PlayerHuman : MonoBehaviour {
 
     void Update()
     {
-        //Vérification des conditions pour sauter
-        int layerMask = 1 << 8; //on identifie le layer 8 "player" comme étant celui à ignorer
-        layerMask = ~layerMask;
 
-        if (Input.GetButtonDown("Jump2") && Physics.Raycast(transform.position, -Vector3.up, distFloorForJump, layerMask) && !isUnderwater) 
-        {
-            Jump();
-        }
-
-        /*
-        //En cas de besoin de tweak du raycast de détection du sol
-        RaycastHit hit;
-        if (Physics.Raycast(transform.position, -Vector3.up, out hit, distFloorForJump, layerMask))
-        {
-            Debug.Log("bon, là ça touche" + hit.collider.gameObject.name);
-        }
-        else
-        {
-            Debug.Log("touche pas");
-        }*/
     }
 
 
 
     void FixedUpdate()
     {
+        //Identification du layer du joueur à ignorer pour les Raycast
+        int layerMask = 1 << 8; //on identifie le layer 8 "player" comme étant celui à ignorer
+        layerMask = ~layerMask;
+
+
+        //Déplacements
+        //Debug.Log(Input.GetAxisRaw("Horizontal"));
+        if (canMove)
+        {
+            if (!climbing) //si est en train de marcher
+            {
+                Vector3 movement = new Vector3(Input.GetAxis("Horizontal2"), 0, 0); //déplacement uniquement horizontal
+                gameObject.transform.position += movement * speed * Time.deltaTime;
+
+                if ((Input.GetAxis("Vertical2") >= 1 || Input.GetAxis("Vertical2") <= -1) && canClimb) //si essaye de monter près d'une échelle
+                {
+                    ClimbLadder(true);
+                }
+            }
+            else //si en train d'escalader une échelle
+            {
+                Vector3 movement = new Vector3(0, Input.GetAxis("Vertical2"), 0); //déplacement uniquement vertical
+                gameObject.transform.position += movement * (speed / climbSpeedReducCoeff) * Time.deltaTime;
+
+                if ((Input.GetAxis("Horizontal2") >= 1 || Input.GetAxis("Horizontal2") <= -1) && Physics.Raycast(transform.position, -Vector3.up, distFloorForJump, layerMask)) //si essaye de s'éloigner quand au sol
+                {
+                    ClimbLadder(false);
+                }
+            }
+
+            if (Input.GetButtonDown("Jump2")) //sauter
+            {
+                Jump(layerMask);
+            }
+        }
+
+        
         //Gestion de l'air sous l'eau
         if (isUnderwater && airStock > 0)
         {
@@ -85,31 +105,42 @@ public class SC_PlayerHuman : MonoBehaviour {
             airSlider.value = airStock / 100;
             sliderFill.GetComponent<Image>().color = Color.Lerp(airSliderColorDanger, airSliderColorSafe, speedLossFromAir.Evaluate(airStock / 100)); //adapter la couleur de la jauge à l'air 
         }
-
-        //Déplacements
-        //Debug.Log(Input.GetAxisRaw("Horizontal"));
-        if (!canClimb) //si n'est pas proche d'une échelle
-        {
-            Vector3 movement = new Vector3(Input.GetAxis("Horizontal2"), 0, 0); //déplacement uniquement horizontal
-            gameObject.transform.position += movement * speed * Time.deltaTime;
-        }
-        else
-        {
-            Vector3 movement = new Vector3(0, Input.GetAxis("Vertical2"), 0); //déplacement uniquement vertical
-            gameObject.transform.position += movement * speed * Time.deltaTime;
-            if (Input.GetAxis("Horizontal2") >= 1 || Input.GetAxis("Horizontal2") <= -1)
-            {
-                canClimb = false;
-            }
-        }
     }
 
 
 
 //Fonctions
-    void Jump() //saut
+    void Jump(LayerMask layerM) //saut
     {
-        rb.AddForce(0, 100 * jumpHeight, 0);
+        ClimbLadder(false);
+
+        if (Physics.Raycast(transform.position, -Vector3.up, distFloorForJump, layerM))
+        {
+            if (!isUnderwater)
+            {
+                rb.AddForce(0, 100 * jumpHeight, 0);
+            }
+            else
+            {
+                rb.AddForce(0, 40 * jumpHeight, 0);
+            }
+        }
+
+
+
+
+
+        /*
+        //En cas de besoin de tweak du raycast de détection du sol
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, -Vector3.up, out hit, distFloorForJump, layerMask))
+        {
+            Debug.Log("là ça touche" + hit.collider.gameObject.name);
+        }
+        else
+        {
+            Debug.Log("touche pas");
+        }*/
     }
 
 
@@ -135,8 +166,17 @@ public class SC_PlayerHuman : MonoBehaviour {
 
 
 
+    void ClimbLadder(bool onLadder) //changement d'état pour pouvoir escalader
+    {
+        climbing = onLadder;
+        gameObject.GetComponent<Rigidbody>().useGravity = !onLadder;
+    }
+
+
+
     private void OnTriggerEnter(Collider c)
     {
+        //Debug.Log(c.gameObject.name);
 		if (c.gameObject.tag == "Water") //entre dans l'eau
         {
 			isUnderwater = true;
@@ -158,17 +198,29 @@ public class SC_PlayerHuman : MonoBehaviour {
             airStock = 100;
             airSlider.gameObject.SetActive(false);
         }
-        else if (c.gameObject.tag == "Ladder") //n'est plus au contact d'une échelle
+        else if (c.gameObject.tag == "Ladder" && canMove) //n'est plus au contact d'une échelle et déplacé par le joueur
         {
-            canClimb = false;
+            if (c.gameObject.name.Contains("Top") && climbing && Input.GetAxis("Vertical2") >= 1) //si en haut de de l'échelle, effectue un dernier saut et s'en détache
+            {
+                Vector3 arrivalPosition = c.GetComponentInParent<SC_LadderTop>().GetArrivalPosition();
+                canMove = false;
+                StartCoroutine(ClimbingFinalJump(arrivalPosition, Time.time));
+            }
+            else
+            {
+                canClimb = false;
+                ClimbLadder(false);
+            }
         }
     }
+
+
 
     //Détection des collisions & stuff
     private void OnCollisionEnter(Collision collision)
     {
         GameObject collidedObj = collision.gameObject;
-        Debug.Log(collidedObj);
+        //Debug.Log(collidedObj);
         if (collision.gameObject.name.Contains("Item")) //en contact avec un object
         {
             if (collision.gameObject.tag == "IAir") //récupère une bulle d'air
@@ -178,23 +230,6 @@ public class SC_PlayerHuman : MonoBehaviour {
                 airStock = 100;
             }
         }
-
-       /* if (collision.gameObject.tag == "Water") //entre dans l'eau
-        {
-            isUnderwater = true;
-            speed = maxSpeedUnderwater;
-        }*/
-
-                /*else if (collidedObj.name.Contains("Otter")) //WIP
-        {
-            Debug.Log(collidedObj.GetComponentInChildren<GameObject>().tag);
-
-            //GameObject OtterChild = collidedObj
-            if (collidedObj.GetComponentInChildren<GameObject>().tag == "IAir")
-            {
-                Debug.Log("that'll do it");
-            }
-        }*/
     }
 
 
@@ -204,5 +239,24 @@ public class SC_PlayerHuman : MonoBehaviour {
         airGauge = gObj;
         airSlider = airGauge.GetComponent<Slider>();
         sliderFill = fill;
+    }
+
+    public void SetCanMove (bool allowMove) //Établir si le personnage peut se déplacer ou non
+    {
+        canMove = allowMove;
+    }
+
+    IEnumerator ClimbingFinalJump(Vector3 arrival, float startTime) //déplacement en fin d'escalade vers l'arrivée fixée
+    {
+        for (float fracJourney = 0; fracJourney <= 1.0f;)
+        {
+            float distCovered = (Time.time - startTime) * speed/50; //gestion de la durée de l'animation
+            fracJourney = distCovered / Vector3.Distance(transform.position, arrival); //calcul de la progession
+            transform.position = Vector3.Lerp(transform.position, arrival, fracJourney);
+            yield return null;
+        }
+        canMove = true;
+        canClimb = false;
+        ClimbLadder(false);
     }
 }
