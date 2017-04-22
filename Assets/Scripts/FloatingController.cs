@@ -22,6 +22,9 @@ public class FloatingController : MonoBehaviour {
     public float gravityScale;
     public float maxGravityVelocity;
 
+    [HideInInspector]
+    public PlayerController controller;
+
     Rigidbody rb;
     Vector3 inputDirection;
     float inputDelta;
@@ -29,14 +32,18 @@ public class FloatingController : MonoBehaviour {
 	void Start ()
     {
         rb = GetComponent<Rigidbody>();
+        controller = SC_GameManager.instance.player1;
+        controller.isActive = true;
 	}
 	
 	void FixedUpdate ()
     {
+        if (!controller.isActive) return;
+
         if (rb.velocity.magnitude > maxVelocity)
             rb.velocity = maxVelocity * rb.velocity.normalized;
 
-        inputDirection = new Vector3(Input.GetAxis("Horizontal1"), Input.GetAxis("Vertical1"), 0f);
+        inputDirection = new Vector3(Input.GetAxis(controller.horizontalAxis), Input.GetAxis(controller.verticalAxis), 0f);
 
         if (inputDirection.magnitude > 0f)
         {
