@@ -18,6 +18,7 @@ public class SC_PlayerHuman : MonoBehaviour {
 
     //Variables d'état
     bool isUnderwater; //vrai si le personnage est sous la surface, faux s'il est au-dessus
+    bool canClimb; //si le personnage peut escalader une échelle
 
     //Autre variables
     Rigidbody rb; //rigidbody de l'acteur
@@ -87,8 +88,20 @@ public class SC_PlayerHuman : MonoBehaviour {
 
         //Déplacements
         //Debug.Log(Input.GetAxisRaw("Horizontal"));
-        Vector3 movement = new Vector3(Input.GetAxis("Horizontal2"), 0, 0);
-        gameObject.transform.position += movement * speed * Time.deltaTime;
+        if (!canClimb) //si n'est pas proche d'une échelle
+        {
+            Vector3 movement = new Vector3(Input.GetAxis("Horizontal2"), 0, 0); //déplacement uniquement horizontal
+            gameObject.transform.position += movement * speed * Time.deltaTime;
+        }
+        else
+        {
+            Vector3 movement = new Vector3(0, Input.GetAxis("Vertical2"), 0); //déplacement uniquement vertical
+            gameObject.transform.position += movement * speed * Time.deltaTime;
+            if (Input.GetAxis("Horizontal2") >= 1 || Input.GetAxis("Horizontal2") <= -1)
+            {
+                canClimb = false;
+            }
+        }
     }
 
 
@@ -130,6 +143,10 @@ public class SC_PlayerHuman : MonoBehaviour {
             SpeedChange(true);
             airGauge.SetActive(true);
         }
+        else if (c.gameObject.tag == "Ladder") //au contact d'une échelle
+        {
+            canClimb = true;
+        }
     }
 
     private void OnTriggerExit(Collider c)
@@ -140,6 +157,10 @@ public class SC_PlayerHuman : MonoBehaviour {
             SpeedChange(true);
             airStock = 100;
             airSlider.gameObject.SetActive(false);
+        }
+        else if (c.gameObject.tag == "Ladder") //n'est plus au contact d'une échelle
+        {
+            canClimb = false;
         }
     }
 
