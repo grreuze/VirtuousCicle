@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 public class SC_MultiTargetCamera : MonoBehaviour {
-
-    public Transform[] targets;
+    
+    public List<Transform> targets;
     public Vector3 offset;
     public MinMax distance = new MinMax(7, 20);
     public float currentDistance = 14,
@@ -16,12 +17,18 @@ public class SC_MultiTargetCamera : MonoBehaviour {
     }
 
     void Update() {
+        Vector3 camPos = offset;
+        if (targets.Count > 0) {
+            foreach (Transform target in targets) {
+                camPos += target.position;
+            }
+            camPos /= targets.Count;
+
+            if (targets.Count > 1) {
+                currentDistance = distance.Clamp(Vector3.Distance(targets[0].position, targets[1].position) * distanceModifier);
+            }
+        }
         
-        Vector3 camPos = (targets[1].position + targets[0].position) / 2 + offset;
-        //my.LookAt(camPos);
-
-        currentDistance = distance.Clamp(Vector3.Distance(targets[0].position, targets[1].position) * distanceModifier);
-
         camPos.z -= currentDistance;
 
         my.position = Vector3.Slerp(my.position, camPos, smooth * Time.deltaTime);

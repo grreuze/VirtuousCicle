@@ -1,8 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class FloatingController : MonoBehaviour {
+public class FloatingController : PlayerCharacter {
 
     [Header("Basic Movement")]
     public float maxVelocity;
@@ -22,20 +20,14 @@ public class FloatingController : MonoBehaviour {
     public float gravityScale;
     public float maxGravityVelocity;
 
-    [HideInInspector]
-    public PlayerController controller;
-
     Rigidbody rb;
     Vector3 inputDirection;
     float inputDelta;
-
-	void Start ()
-    {
+    
+    void Start () {
         rb = GetComponent<Rigidbody>();
-        controller = SC_GameManager.instance.player1;
-        controller.isActive = true;
-	}
-	
+    }
+
 	void FixedUpdate ()
     {
         if (!controller.isActive) return;

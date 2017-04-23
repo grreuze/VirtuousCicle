@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
 
 [System.Serializable]
-public struct PlayerController {
-    
+public class PlayerController {
+    [HideInInspector]
+    public string name;
     public string horizontalAxis, 
                   verticalAxis, 
                   jumpButton, 

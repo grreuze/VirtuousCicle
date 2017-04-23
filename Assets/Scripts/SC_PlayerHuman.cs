@@ -3,25 +3,33 @@ using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine;
 
-public class SC_PlayerHuman : MonoBehaviour {
-    
-    //Variables de déplacement
-    float speed = 1; //vitesse de déplacement à l'instant
+public class SC_PlayerHuman : PlayerCharacter {
+
+    [Header("Movement")]
     public float maxSpeed; //vitesse maximale de déplacement
     public float maxSpeedUnderwater; //vitesse maximale de déplacement sous l'eau
     public float minSpeed; //vitesse minimale de déplacement
     public float climbSpeedReducCoeff = 1; //par combien est divisiée la vitesse en escalade
-    float airStock = 100; //pourcentage d'air restant au personnage
     public float airPercentLoss; //pourcentage d'air perdu à chaque frame
     public AnimationCurve speedLossFromAir; //tableau de la perte de vitesse en fonction de l'air restant
     public float jumpHeight; //hauteur du saut
     public float distFloorForJump; //distance minimale avec le sol pour pouvoir sauter
+    
+    [Header("State")]
+    public bool canClimb; //si le personnage peut escalader une échelle
+    public bool climbing; //si le personnage est en train de monter le long d'une échelle
+    
+    [Header("Colors")]
+    public Color airSliderColorSafe; //couleur de la jauge d'oxygène avant la perte de vitesse
+    public Color airSliderColorDanger; //couleur de la jauge d'oxygène à la fin de la perte de vitesse
+
+    //Variables de déplacement
+    float speed = 1; //vitesse de déplacement à l'instant
+    float airStock = 100; //pourcentage d'air restant au personnage
 
     //Variables d'état
     bool isUnderwater; //vrai si le personnage est sous la surface, faux s'il est au-dessus
     bool canMove;
-    public bool canClimb; //si le personnage peut escalader une échelle
-    public bool climbing; //si le personnage est en train de monter le long d'une échelle
 
     //Autre variables
     Rigidbody rb; //rigidbody de l'acteur
@@ -29,35 +37,15 @@ public class SC_PlayerHuman : MonoBehaviour {
     GameObject airGauge; 
     Slider airSlider; //jauge d'oxygène
     Transform sliderFill; //référence au "fill" du slider
-    public Color airSliderColorSafe; //couleur de la jauge d'oxygène avant la perte de vitesse
-    public Color airSliderColorDanger; //couleur de la jauge d'oxygène à la fin de la perte de vitesse
     
-
-
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         coll = GetComponent<Collider>();
         canMove = true;
-        if (isUnderwater)
-        {
-            speed = maxSpeedUnderwater;
-        }
-        else
-        {
-            speed = maxSpeed;
-        }
+        speed = isUnderwater ? maxSpeedUnderwater : maxSpeed;
     }
-
     
-
-    void Update()
-    {
-
-    }
-
-
-
     void FixedUpdate()
     {
         //Identification du layer du joueur à ignorer pour les Raycast
@@ -71,26 +59,26 @@ public class SC_PlayerHuman : MonoBehaviour {
         {
             if (!climbing) //si est en train de marcher
             {
-                Vector3 movement = new Vector3(Input.GetAxis("Horizontal2"), 0, 0); //déplacement uniquement horizontal
+                Vector3 movement = new Vector3(Input.GetAxis(controller.horizontalAxis), 0, 0); //déplacement uniquement horizontal
                 gameObject.transform.position += movement * speed * Time.deltaTime;
 
-                if ((Input.GetAxis("Vertical2") >= 1 || Input.GetAxis("Vertical2") <= -1) && canClimb) //si essaye de monter près d'une échelle
+                if ((Input.GetAxis(controller.verticalAxis) >= 1 || Input.GetAxis(controller.verticalAxis) <= -1) && canClimb) //si essaye de monter près d'une échelle
                 {
                     ClimbLadder(true);
                 }
             }
             else //si en train d'escalader une échelle
             {
-                Vector3 movement = new Vector3(0, Input.GetAxis("Vertical2"), 0); //déplacement uniquement vertical
+                Vector3 movement = new Vector3(0, Input.GetAxis(controller.verticalAxis), 0); //déplacement uniquement vertical
                 gameObject.transform.position += movement * (speed / climbSpeedReducCoeff) * Time.deltaTime;
 
-                if ((Input.GetAxis("Horizontal2") >= 1 || Input.GetAxis("Horizontal2") <= -1) && Physics.Raycast(transform.position, -Vector3.up, distFloorForJump, layerMask)) //si essaye de s'éloigner quand au sol
+                if ((Input.GetAxis(controller.horizontalAxis) >= 1 || Input.GetAxis(controller.horizontalAxis) <= -1) && Physics.Raycast(transform.position, -Vector3.up, distFloorForJump, layerMask)) //si essaye de s'éloigner quand au sol
                 {
                     ClimbLadder(false);
                 }
             }
 
-            if (Input.GetButtonDown("Jump2")) //sauter
+            if (Input.GetButtonDown(controller.jumpButton)) //sauter
             {
                 Jump(layerMask);
             }
@@ -125,11 +113,7 @@ public class SC_PlayerHuman : MonoBehaviour {
                 rb.AddForce(0, 40 * jumpHeight, 0);
             }
         }
-
-
-
-
-
+        
         /*
         //En cas de besoin de tweak du raycast de détection du sol
         RaycastHit hit;
@@ -200,7 +184,7 @@ public class SC_PlayerHuman : MonoBehaviour {
         }
         else if (c.gameObject.tag == "Ladder" && canMove) //n'est plus au contact d'une échelle et déplacé par le joueur
         {
-            if (c.gameObject.name.Contains("Top") && climbing && Input.GetAxis("Vertical2") >= 1) //si en haut de de l'échelle, effectue un dernier saut et s'en détache
+            if (c.gameObject.name.Contains("Top") && climbing && Input.GetAxis(controller.verticalAxis) >= 1) //si en haut de de l'échelle, effectue un dernier saut et s'en détache
             {
                 Vector3 arrivalPosition = c.GetComponentInParent<SC_LadderTop>().GetArrivalPosition();
                 canMove = false;
