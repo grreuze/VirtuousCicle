@@ -14,11 +14,14 @@ public class SC_PlayerHuman : PlayerCharacter {
     public AnimationCurve speedLossFromAir; //tableau de la perte de vitesse en fonction de l'air restant
     public float jumpHeight; //hauteur du saut
     public float distFloorForJump; //distance minimale avec le sol pour pouvoir sauter
-    
-    [Header("State")]
-    public bool canClimb; //si le personnage peut escalader une échelle
-    public bool climbing; //si le personnage est en train de monter le long d'une échelle
-    
+
+    [Header("Item management")]
+    public bool canTake; //si le personnage peut prendre quelque chose
+    public bool holdSmthg; //vrai si le personnage porte quelque chose
+    GameObject canBeTakenItem; //objet à portée du personnage qu'il peut porter
+    public GameObject heldItem; //ce que le personnage porte
+    public GameObject takeIcon; //GameObject de l'icone montrant que le personnage peut prendre un objet
+
     [Header("Colors")]
     public Color airSliderColorSafe; //couleur de la jauge d'oxygène avant la perte de vitesse
     public Color airSliderColorDanger; //couleur de la jauge d'oxygène à la fin de la perte de vitesse
@@ -28,8 +31,10 @@ public class SC_PlayerHuman : PlayerCharacter {
     float airStock = 100; //pourcentage d'air restant au personnage
 
     //Variables d'état
+    bool canClimb; //si le personnage peut escalader une échelle
+    bool climbing; //si le personnage est en train de monter le long d'une échelle
     bool isUnderwater; //vrai si le personnage est sous la surface, faux s'il est au-dessus
-    bool canMove;
+    bool canMove; //vrai si le joueur peut contrôler le personnage
 
     //Autre variables
     Rigidbody rb; //rigidbody de l'acteur
@@ -53,7 +58,7 @@ public class SC_PlayerHuman : PlayerCharacter {
         layerMask = ~layerMask;
 
 
-        //Déplacements
+        //Déplacements & interactions
         //Debug.Log(Input.GetAxisRaw("Horizontal"));
         if (canMove)
         {
@@ -81,6 +86,24 @@ public class SC_PlayerHuman : PlayerCharacter {
             if (Input.GetButtonDown(controller.jumpButton)) //sauter
             {
                 Jump(layerMask);
+            }
+
+            if (Input.GetButtonDown(controller.interactButton) && (canTake || holdSmthg)) //prendre un objet
+            {
+                if (!holdSmthg) //si ne porte rien
+                {
+                    heldItem = canBeTakenItem;
+                    heldItem.transform.SetParent(this.transform);
+                    heldItem.transform.position = new Vector3(transform.position.x, transform.position.y + 1.5f, transform.position.z);
+                    holdSmthg = true;
+                }
+                else //si porte quelque chose
+                {
+                    heldItem.transform.position = new Vector3(transform.position.x, transform.position.y - 0.5f, transform.position.z);
+                    heldItem.transform.SetParent(null);
+                    heldItem = null;
+                    holdSmthg = false;
+                }
             }
         }
 
@@ -158,6 +181,24 @@ public class SC_PlayerHuman : PlayerCharacter {
 
 
 
+    void ItemInteraction (GameObject item, bool isclose) //interaction vis-à-vis d'un objet au contact
+    {
+        if (item.name.Contains("Air") && isclose) //récupère une bulle d'air
+        {
+            SpeedChange(true);
+            Destroy(item);
+            airStock = 100;
+        }
+        else //tout autre objet peut potentiellement être transporté
+        {
+            takeIcon.gameObject.SetActive(isclose);
+            canTake = isclose;
+            canBeTakenItem = item;
+        }
+    }
+
+
+
     private void OnTriggerEnter(Collider c)
     {
         //Debug.Log(c.gameObject.name);
@@ -170,6 +211,10 @@ public class SC_PlayerHuman : PlayerCharacter {
         else if (c.gameObject.tag == "Ladder") //au contact d'une échelle
         {
             canClimb = true;
+        }
+        else if (c.gameObject.tag == "Item") //au contact d'un objet
+        {
+            ItemInteraction(c.gameObject, true);
         }
     }
 
@@ -196,23 +241,9 @@ public class SC_PlayerHuman : PlayerCharacter {
                 ClimbLadder(false);
             }
         }
-    }
-
-
-
-    //Détection des collisions & stuff
-    private void OnCollisionEnter(Collision collision)
-    {
-        GameObject collidedObj = collision.gameObject;
-        //Debug.Log(collidedObj);
-        if (collision.gameObject.name.Contains("Item")) //en contact avec un object
+        else if (c.gameObject.tag == "Item") //n'est plus au contact d'un objet
         {
-            if (collision.gameObject.tag == "IAir") //récupère une bulle d'air
-            {
-                SpeedChange(true);
-                Destroy(collision.gameObject);
-                airStock = 100;
-            }
+            ItemInteraction(c.gameObject, false);
         }
     }
 
