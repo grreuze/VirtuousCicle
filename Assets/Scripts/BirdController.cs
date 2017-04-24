@@ -16,32 +16,81 @@ public class BirdController : PlayerCharacter
     public float gravityScale;
     public float maxGravityVelocity;
     public float flapForce;
+    [Header("OnGround")]
+    public float speed;
+    public float jumpHeight;
+    public float distFloorForJump;
+    [Header("State")]
+    public bool oilCovered;
+    public bool grounded;
 
     Rigidbody rb;
     Vector3 inputDirection;
     float inputDelta;
+    LayerMask layerMask;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        layerMask = 1 << 8; //on identifie le layer 8 "player" comme étant celui à ignorer pour les raycasts
+        layerMask = ~layerMask;
     }
 
     void FixedUpdate()
     {
-       // if (!controller.isActive) return;
-
-        if (rb.velocity.magnitude > maxVelocity)
-            rb.velocity = maxVelocity * rb.velocity.normalized;
-
-        inputDirection = new Vector3(Input.GetAxis(controller.horizontalAxis), Input.GetAxis(controller.verticalAxis), 0f);
-
-        if (inputDirection.magnitude > 0f)
+        // if (!controller.isActive) return;
+        if (Input.GetAxis(controller.verticalAxis) >= 0.5f && !oilCovered) //détection atterrissage
         {
-            ApplyMovement();
+            grounded = false;
+        }
+        else if (Physics.Raycast(transform.position, -Vector3.up, distFloorForJump*3.0f, layerMask)) 
+        {
+            grounded = true;
         }
         else
         {
-            ApplyGravity();
+            grounded = false;
+        }
+        
+        if (oilCovered || grounded) //déplacements au sol
+        {
+            rb.useGravity = true;
+
+            Vector3 movement = new Vector3(Input.GetAxis(controller.horizontalAxis), 0, 0); //déplacement uniquement horizontal
+            gameObject.transform.position += movement * speed * Time.deltaTime;
+
+            if (Input.GetButtonDown(controller.jumpButton)) //si essaye de s'envoler
+            {
+                if (!oilCovered)
+                {
+                    rb.AddForce(0, 75 * jumpHeight, 0);
+                }
+                else
+                {
+                    if (Physics.Raycast(transform.position, -Vector3.up, distFloorForJump, layerMask))
+                    {
+                        rb.AddForce(0, 50 * jumpHeight, 0);
+                    }
+                }
+            }
+        }
+        else //déplacements dans le ciel
+        {
+            GetComponent<Rigidbody>().useGravity = false;
+
+            if (rb.velocity.magnitude > maxVelocity)
+                rb.velocity = maxVelocity * rb.velocity.normalized;
+
+            inputDirection = new Vector3(Input.GetAxis(controller.horizontalAxis), Input.GetAxis(controller.verticalAxis), 0f);
+
+            if (inputDirection.magnitude > 0f)
+            {
+                ApplyMovement();
+            }
+            else
+            {
+                ApplyGravity();
+            }
         }
     }
 
@@ -62,7 +111,8 @@ public class BirdController : PlayerCharacter
     {
         rb.AddForce(Vector3.up * gravityScale, ForceMode.Acceleration);
 
-        if (rb.velocity.y < -maxGravityVelocity)
+        if (rb.velocity.y < -maxGravityVelocity && !oilCovered)
             rb.AddForce(Vector3.up * flapForce, ForceMode.VelocityChange);
     }
+
 }
