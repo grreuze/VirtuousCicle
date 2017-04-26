@@ -1,4 +1,6 @@
 ﻿using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
 
 public class FloatingController : PlayerCharacter {
 
@@ -18,24 +20,37 @@ public class FloatingController : PlayerCharacter {
     public float dashCooldown;
     [Header("Gravity")]
     public float gravityScale;
+    public float gravityScaleOutWater;
     public float maxGravityVelocity;
+    [Header("Movement on ground")]
+    public float boostForceOnGround;
 
     Rigidbody rb;
     Vector3 inputDirection;
     float inputDelta;
+
+    float initialBoostForce;
+    bool isInWater = true;
     
     void Start () {
         rb = GetComponent<Rigidbody>();
+        initialBoostForce = boostForce;
     }
 
-	void FixedUpdate ()
+    void FixedUpdate()
     {
         if (!controller.isActive) return;
 
+        if (isInWater)
+        {
+            inputDirection = new Vector3(Input.GetAxis(controller.horizontalAxis), Input.GetAxis(controller.verticalAxis), 0f);
+        }
+        else
+        {
+            inputDirection = new Vector3(Input.GetAxis(controller.horizontalAxis), Input.GetAxis(controller.verticalAxis) * 0.1f, 0f);
+        }
         if (rb.velocity.magnitude > maxVelocity)
             rb.velocity = maxVelocity * rb.velocity.normalized;
-
-        inputDirection = new Vector3(Input.GetAxis(controller.horizontalAxis), Input.GetAxis(controller.verticalAxis), 0f);
 
         if (inputDirection.magnitude > 0f)
         {
@@ -51,11 +66,11 @@ public class FloatingController : PlayerCharacter {
                 ApplyMovement();
             }
         }
-        else if (rb.velocity.magnitude < maxGravityVelocity)
+        else if (rb.velocity.magnitude < maxGravityVelocity && isInWater)
         {
             ApplyGravity();
         }
-	}
+    }
 
     void ApplyRotation()
     {
@@ -87,5 +102,48 @@ public class FloatingController : PlayerCharacter {
     void ApplyGravity()
     {
         rb.AddForce(Vector3.up * gravityScale, ForceMode.Acceleration);
+    }
+    
+    IEnumerator TransitionWater(bool entering, float transitionProgression)
+    {
+        isInWater = entering;
+        while (isInWater == false)
+        {
+            ApplyGravityOutWater(transitionProgression);
+            transitionProgression += 0.1f;
+            yield return new WaitForSeconds(0.1f);
+        }
+        if (isInWater == true)
+        {
+            while (transitionProgression >= 0f)
+            {
+                ApplyGravityOutWater(transitionProgression);
+                transitionProgression -= 0.1f;
+                yield return new WaitForSeconds(0.1f);
+            }
+        }
+    }
+
+    void ApplyGravityOutWater(float gravityChangeFactor)
+    {
+        rb.AddForce(Vector3.up * Mathf.Lerp(gravityScale, gravityScaleOutWater, gravityChangeFactor), ForceMode.Acceleration);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Water"))
+        {
+            StartCoroutine(TransitionWater(true, 1.0f));
+            boostForce = initialBoostForce;
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Water"))
+        {
+            StartCoroutine(TransitionWater(false, 0f));
+            boostForce = boostForceOnGround;
+        }
     }
 }
