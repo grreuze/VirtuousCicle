@@ -47,7 +47,7 @@ public class FloatingController : PlayerCharacter {
         }
         else
         {
-            inputDirection = new Vector3(Input.GetAxis(controller.horizontalAxis), Input.GetAxis(controller.verticalAxis) * 0.1f, 0f);
+            inputDirection = new Vector3(Input.GetAxis(controller.horizontalAxis), 0f, 0f);
         }
         if (rb.velocity.magnitude > maxVelocity)
             rb.velocity = maxVelocity * rb.velocity.normalized;
@@ -106,21 +106,28 @@ public class FloatingController : PlayerCharacter {
     
     IEnumerator TransitionWater(bool entering, float transitionProgression)
     {
-        isInWater = entering;
-        while (isInWater == false)
+        if (entering == false)
         {
-            ApplyGravityOutWater(transitionProgression);
-            transitionProgression += 0.1f;
-            yield return new WaitForSeconds(0.1f);
+            isInWater = false;
+            while (isInWater == false)
+            {
+                ApplyGravityOutWater(transitionProgression);
+                if (transitionProgression < 1)
+                {
+                    transitionProgression += 0.1f;
+                }
+                yield return new WaitForSeconds(0.066f);
+            }
         }
-        if (isInWater == true)
+        else
         {
             while (transitionProgression >= 0f)
             {
                 ApplyGravityOutWater(transitionProgression);
                 transitionProgression -= 0.1f;
-                yield return new WaitForSeconds(0.1f);
+                yield return new WaitForSeconds(0.033f);
             }
+            isInWater = true;
         }
     }
 
@@ -133,7 +140,7 @@ public class FloatingController : PlayerCharacter {
     {
         if (other.CompareTag("Water"))
         {
-            StartCoroutine(TransitionWater(true, 1.0f));
+            StartCoroutine(TransitionWater(true, 0.5f));
             boostForce = initialBoostForce;
         }
     }

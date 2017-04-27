@@ -1,4 +1,6 @@
 ﻿using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
 
 public class BirdController : PlayerCharacter
 {
@@ -16,6 +18,7 @@ public class BirdController : PlayerCharacter
     public float gravityScale;
     public float maxGravityVelocity;
     public float flapForce;
+    public float gravityScaleInWater;
     [Header("OnGround")]
     public float speed;
     public float jumpHeight;
@@ -23,11 +26,13 @@ public class BirdController : PlayerCharacter
     [Header("State")]
     public bool oilCovered;
     public bool grounded;
+    
 
     Rigidbody rb;
     Vector3 inputDirection;
     float inputDelta;
     LayerMask layerMask;
+    bool isInWater = false;
 
     void Start()
     {
@@ -43,7 +48,7 @@ public class BirdController : PlayerCharacter
         {
             grounded = false;
         }
-        else if (Physics.Raycast(transform.position, -Vector3.up, distFloorForJump*3.0f, layerMask)) 
+        else if (Physics.Raycast(transform.position, -Vector3.up, distFloorForJump*3.0f, layerMask) && !isInWater) 
         {
             grounded = true;
         }
@@ -81,7 +86,14 @@ public class BirdController : PlayerCharacter
             if (rb.velocity.magnitude > maxVelocity)
                 rb.velocity = maxVelocity * rb.velocity.normalized;
 
-            inputDirection = new Vector3(Input.GetAxis(controller.horizontalAxis), Input.GetAxis(controller.verticalAxis), 0f);
+            if (!isInWater)
+            {
+                inputDirection = new Vector3(Input.GetAxis(controller.horizontalAxis), Input.GetAxis(controller.verticalAxis), 0f);
+            }
+            else
+            {
+                inputDirection = new Vector3(Input.GetAxis(controller.horizontalAxis), Input.GetAxis(controller.verticalAxis) * 0.00001f, 0f);
+            }
 
             if (inputDirection.magnitude > 0f)
             {
@@ -89,7 +101,10 @@ public class BirdController : PlayerCharacter
             }
             else
             {
-                ApplyGravity();
+                if (!isInWater)
+                {
+                    ApplyGravity();
+                }
             }
         }
     }
@@ -115,4 +130,44 @@ public class BirdController : PlayerCharacter
             rb.AddForce(Vector3.up * flapForce, ForceMode.VelocityChange);
     }
 
+    IEnumerator TransitionWater(bool exiting, float transitionProgression)
+    {
+        isInWater = exiting;
+        while (isInWater == true)
+        {
+            ApplyGravityOutWater(transitionProgression);
+            transitionProgression += 0.1f;
+            yield return new WaitForSeconds(0.1f);
+        }
+        if (isInWater == false)
+        {
+            while (transitionProgression >= 0f)
+            {
+                ApplyGravityOutWater(transitionProgression);
+                transitionProgression -= 0.1f;
+                yield return new WaitForSeconds(0.005f);
+            }
+        }
+    }
+
+    void ApplyGravityOutWater(float gravityChangeFactor)
+    {
+        rb.AddForce(Vector3.up * Mathf.Lerp(gravityScale, gravityScaleInWater, gravityChangeFactor), ForceMode.Acceleration);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Water"))
+        {
+            StartCoroutine(TransitionWater(true, 0f));
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Water"))
+        {
+            StartCoroutine(TransitionWater(false, 0.2f));
+        }
+    }
 }
