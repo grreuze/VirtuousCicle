@@ -16,13 +16,15 @@ public class SC_PlayerHuman : PlayerCharacter {
     public float distFloorForJump; //distance minimale avec le sol pour pouvoir sauter
 
     [Header("Item management")]
-    public bool canTake; //si le personnage peut prendre quelque chose
+    bool canTake; //si le personnage peut prendre quelque chose
     public bool holdSmthg; //vrai si le personnage porte quelque chose
     GameObject canBeTakenItem; //objet à portée du personnage qu'il peut porter
     public GameObject heldItem; //ce que le personnage porte
     public GameObject takeIcon; //GameObject de l'icone montrant que le personnage peut prendre un objet
+    Transform itemParentTrans;
+    GameObject itemPositionGo;
 
-    [Header("Colors")]
+    [Header("Gauge colors")]
     public Color airSliderColorSafe; //couleur de la jauge d'oxygène avant la perte de vitesse
     public Color airSliderColorDanger; //couleur de la jauge d'oxygène à la fin de la perte de vitesse
 
@@ -38,7 +40,7 @@ public class SC_PlayerHuman : PlayerCharacter {
 
     //Autre variables
     Rigidbody rb; //rigidbody de l'acteur
-    Collider coll; //collider de l'acteur
+    //Collider coll; //collider de l'acteur (inutilisé)
     GameObject airGauge; 
     Slider airSlider; //jauge d'oxygène
     Transform sliderFill; //référence au "fill" du slider
@@ -46,9 +48,10 @@ public class SC_PlayerHuman : PlayerCharacter {
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        coll = GetComponent<Collider>();
+        //coll = GetComponent<Collider>(); //inutilisé
         canMove = true;
         speed = isUnderwater ? maxSpeedUnderwater : maxSpeed;
+        itemPositionGo = transform.GetChild(2).gameObject;
     }
     
     void FixedUpdate()
@@ -93,8 +96,7 @@ public class SC_PlayerHuman : PlayerCharacter {
                 if (!holdSmthg) //si ne porte rien
                 {
                     heldItem = canBeTakenItem;
-                    heldItem.transform.SetParent(this.transform);
-                    heldItem.transform.position = new Vector3(transform.position.x, transform.position.y + 1.5f, transform.position.z);
+                    heldItem.transform.SetParent(transform);
                     holdSmthg = true;
                 }
                 else //si porte quelque chose
@@ -103,6 +105,20 @@ public class SC_PlayerHuman : PlayerCharacter {
                     heldItem.transform.SetParent(null);
                     heldItem = null;
                     holdSmthg = false;
+                }
+            }
+
+            if (holdSmthg) //adapter position d'un objet tenu en fonction du déplacement
+            {
+                heldItem.transform.position = itemPositionGo.transform.position;
+
+                if (Input.GetAxis(controller.horizontalAxis) > 0)
+                {
+                    itemPositionGo.transform.localPosition = new Vector3(0.75f, -0.25f, 0f);
+                }
+                else if (Input.GetAxis(controller.horizontalAxis) < 0)
+                {
+                    itemPositionGo.transform.localPosition = new Vector3(-0.75f, -0.25f, 0f);
                 }
             }
         }
@@ -183,18 +199,9 @@ public class SC_PlayerHuman : PlayerCharacter {
 
     void ItemInteraction (GameObject item, bool isclose) //interaction vis-à-vis d'un objet au contact
     {
-        if (item.name.Contains("Air") && isclose) //récupère une bulle d'air
-        {
-            SpeedChange(true);
-            Destroy(item);
-            airStock = 100;
-        }
-        else //tout autre objet peut potentiellement être transporté
-        {
-            takeIcon.gameObject.SetActive(isclose);
-            canTake = isclose;
-            canBeTakenItem = item;
-        }
+        takeIcon.gameObject.SetActive(isclose);
+        canTake = isclose;
+        canBeTakenItem = item;
     }
 
 
@@ -214,7 +221,30 @@ public class SC_PlayerHuman : PlayerCharacter {
         }
         else if (c.gameObject.tag == "Item") //au contact d'un objet
         {
-            ItemInteraction(c.gameObject, true);
+            if (c.name.Contains("Air")) //récupère une bulle d'air
+            {
+                if (c.transform.parent != null)
+                {
+                    itemParentTrans = c.transform.parent;
+                    if (itemParentTrans.name.Contains("Bird"))
+                    {
+                        itemParentTrans.GetComponent<BirdController>().heldItem = null;
+                        itemParentTrans.GetComponent<BirdController>().holdSmthg = false;
+                    }
+                    else if (itemParentTrans.name.Contains("Otter"))
+                    {
+                        itemParentTrans.GetComponent<FloatingController>().heldItem = null;
+                        itemParentTrans.GetComponent<FloatingController>().holdSmthg = false;
+                    }
+                }
+                SpeedChange(true);
+                Destroy(c.gameObject);
+                airStock = 100;
+            }
+            else if (c.transform.parent == null)
+            {
+                ItemInteraction(c.gameObject, true);
+            }
         }
     }
 
