@@ -25,6 +25,7 @@ public class BirdController : PlayerCharacter
     public float distFloorForJump;
     [Header("State")]
     public bool oilCovered;
+    public Material oilMaterial;
     public bool grounded;
     [Header("Item management")]
     public GameObject heldItem; //ce que le personnage porte
@@ -67,6 +68,11 @@ public class BirdController : PlayerCharacter
         {
             transform.GetChild(3).gameObject.SetActive(true);
             speed = speedHungry;
+        }
+
+        if (oilCovered)
+        {
+            transform.GetChild(0).GetComponent<Renderer>().material = oilMaterial;
         }
     }
 

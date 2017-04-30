@@ -44,6 +44,9 @@ public class SC_PlayerHuman : PlayerCharacter {
     GameObject airGauge; 
     Slider airSlider; //jauge d'oxygène
     Transform sliderFill; //référence au "fill" du slider
+    Transform rightArms;
+    Transform leftArms;
+    SC_ArmAnimation[] armsAnimations;
     
     void Start()
     {
@@ -52,6 +55,8 @@ public class SC_PlayerHuman : PlayerCharacter {
         canMove = true;
         speed = isUnderwater ? maxSpeedUnderwater : maxSpeed;
         itemPositionGo = transform.GetChild(2).gameObject;
+        rightArms = transform.GetChild(3);
+        leftArms = transform.GetChild(4);
     }
     
     void FixedUpdate()
@@ -65,6 +70,7 @@ public class SC_PlayerHuman : PlayerCharacter {
         //Debug.Log(Input.GetAxisRaw("Horizontal"));
         if (canMove)
         {
+
             if (!climbing) //si est en train de marcher
             {
                 Vector3 movement = new Vector3(Input.GetAxis(controller.horizontalAxis), 0, 0); //déplacement uniquement horizontal
@@ -83,6 +89,14 @@ public class SC_PlayerHuman : PlayerCharacter {
                 if ((Input.GetAxis(controller.horizontalAxis) >= 1 || Input.GetAxis(controller.horizontalAxis) <= -1) && Physics.Raycast(transform.position, -Vector3.up, distFloorForJump, layerMask)) //si essaye de s'éloigner quand au sol
                 {
                     ClimbLadder(false);
+                }
+            }
+
+            if (canClimb)
+            {
+                foreach (SC_ArmAnimation anim in armsAnimations)
+                {
+                    anim.animationSpeed = speedLossFromAir.Evaluate(airStock / 100) + 0.1f;
                 }
             }
 
@@ -204,8 +218,6 @@ public class SC_PlayerHuman : PlayerCharacter {
         canBeTakenItem = item;
     }
 
-
-
     private void OnTriggerEnter(Collider c)
     {
         //Debug.Log(c.gameObject.name);
@@ -217,7 +229,30 @@ public class SC_PlayerHuman : PlayerCharacter {
         }
         else if (c.gameObject.tag == "Ladder") //au contact d'une échelle
         {
-            canClimb = true;
+            if (c.gameObject.name.Contains("Top"))
+            {
+                canClimb = true;
+                if (c.transform.parent.GetComponent<SC_LadderTop>().endAtRight)
+                {
+                    rightArms.gameObject.SetActive(true);
+                    armsAnimations = rightArms.GetComponentsInChildren<SC_ArmAnimation>();
+                    foreach (SC_ArmAnimation anim in armsAnimations)
+                    {
+                        anim.animationSpeed = speedLossFromAir.Evaluate(airStock / 100);
+                        anim.StartAnimation();
+                    }
+                }
+                else
+                {
+                    leftArms.gameObject.SetActive(true);
+                    armsAnimations = leftArms.GetComponentsInChildren<SC_ArmAnimation>();
+                    foreach (SC_ArmAnimation anim in armsAnimations)
+                    {
+                        anim.animationSpeed = speedLossFromAir.Evaluate(airStock / 100);
+                        anim.StartAnimation();
+                    }
+                }
+            }
         }
         else if (c.gameObject.tag == "Item") //au contact d'un objet
         {
@@ -267,6 +302,31 @@ public class SC_PlayerHuman : PlayerCharacter {
             }
             else
             {
+                if (c.gameObject.name.Contains("LD"))
+                {
+                    if (c.GetComponent<SC_LadderTop>().endAtRight)
+                    {
+                        rightArms.gameObject.SetActive(false);
+                        armsAnimations = rightArms.GetComponentsInChildren<SC_ArmAnimation>();
+                        foreach (SC_ArmAnimation anim in armsAnimations)
+                        {
+                            anim.StopAllCoroutines();
+                        }
+                        armsAnimations = null;
+                    }
+                    else
+                    {
+                        leftArms.gameObject.SetActive(false);
+                        leftArms.GetComponentInChildren<SC_ArmAnimation>().StopAnimation();
+                        armsAnimations = leftArms.GetComponentsInChildren<SC_ArmAnimation>();
+                        foreach (SC_ArmAnimation anim in armsAnimations)
+                        {
+                            anim.StopAllCoroutines();
+                        }
+                        armsAnimations = null;
+                    }
+                }
+
                 canClimb = false;
                 ClimbLadder(false);
             }
@@ -303,5 +363,23 @@ public class SC_PlayerHuman : PlayerCharacter {
         canMove = true;
         canClimb = false;
         ClimbLadder(false);
+
+        //Réinitilisation des animations (la détection de sortie des trigger ne se fait pas durant le lerp)
+        rightArms.gameObject.SetActive(false);
+        armsAnimations = rightArms.GetComponentsInChildren<SC_ArmAnimation>();
+        foreach (SC_ArmAnimation anim in armsAnimations)
+        {
+            anim.StopAllCoroutines();
+        }
+        armsAnimations = null;
+
+        leftArms.gameObject.SetActive(false);
+        leftArms.GetComponentInChildren<SC_ArmAnimation>().StopAnimation();
+        armsAnimations = leftArms.GetComponentsInChildren<SC_ArmAnimation>();
+        foreach (SC_ArmAnimation anim in armsAnimations)
+        {
+            anim.StopAllCoroutines();
+        }
+        armsAnimations = null;
     }
 }
