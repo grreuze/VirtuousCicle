@@ -59,8 +59,8 @@ public class SC_PlayerHuman : PlayerCharacter {
         leftArms = transform.GetChild(4);
     }
     
-    void FixedUpdate()
-    {
+    void FixedUpdate() {
+        if (controller.character != this) return;
         //Identification du layer du joueur à ignorer pour les Raycast
         int layerMask = 1 << 8; //on identifie le layer 8 "player" comme étant celui à ignorer
         layerMask = ~layerMask;

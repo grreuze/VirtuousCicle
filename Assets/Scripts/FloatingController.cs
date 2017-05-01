@@ -66,9 +66,8 @@ public class FloatingController : PlayerCharacter {
         }
     }
 
-    void FixedUpdate()
-    {
-        if (!controller.isActive) return;
+    void FixedUpdate() {
+        if (controller.character != this) return;
 
         if (isInWater)
         {

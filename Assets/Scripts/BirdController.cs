@@ -78,7 +78,8 @@ public class BirdController : PlayerCharacter
 
     void FixedUpdate()
     {
-        // if (!controller.isActive) return;
+        if (controller.character != this) return;
+
         if (Input.GetAxis(controller.verticalAxis) >= 0.5f && !oilCovered) //détection atterrissage
         {
             grounded = false;

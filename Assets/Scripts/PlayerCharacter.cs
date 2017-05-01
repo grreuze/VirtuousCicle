@@ -39,7 +39,9 @@ public abstract class PlayerCharacter : MonoBehaviour {
     }
 
     public void EnableController() {
-        controller.isActive = true;
+        if (controller.character && controller.character != this)
+            controller.character.DisableController();
+        controller.character = this;
         // Enable Aura
         if (aura.isStopped)
             aura.Play();
@@ -51,7 +53,8 @@ public abstract class PlayerCharacter : MonoBehaviour {
     }
 
     public void DisableController() {
-        controller.isActive = false;
+        if (controller.character == this)
+            controller.character = null;
         // Disable Aura
         if (aura.isPlaying)
             aura.Stop();

@@ -9,5 +9,5 @@ public class PlayerController {
                   jumpButton, 
                   interactButton;
     public Color auraColor;
-    public bool isActive;
+    public PlayerCharacter character;
 }
