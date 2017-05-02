@@ -28,6 +28,14 @@ public class SC_PlayerHuman : PlayerCharacter {
     public Color airSliderColorSafe; //couleur de la jauge d'oxygène avant la perte de vitesse
     public Color airSliderColorDanger; //couleur de la jauge d'oxygène à la fin de la perte de vitesse
 
+    [Header("Bird lifting")]
+    public bool canTakeBird;
+    public float maxDistanceToTakeBird;
+    public float throwForce;
+    GameObject birdReference;
+    public GameObject birdThrowIcon;
+
+
     //Variables de déplacement
     float speed = 1; //vitesse de déplacement à l'instant
     float airStock = 100; //pourcentage d'air restant au personnage
@@ -70,7 +78,6 @@ public class SC_PlayerHuman : PlayerCharacter {
         //Debug.Log(Input.GetAxisRaw("Horizontal"));
         if (canMove)
         {
-
             if (!climbing) //si est en train de marcher
             {
                 Vector3 movement = new Vector3(Input.GetAxis(controller.horizontalAxis), 0, 0); //déplacement uniquement horizontal
@@ -105,34 +112,67 @@ public class SC_PlayerHuman : PlayerCharacter {
                 Jump(layerMask);
             }
 
-            if (Input.GetButtonDown(controller.interactButton) && (canTake || holdSmthg)) //prendre un objet
+            if (Input.GetButtonDown(controller.interactButton) && (canTake || holdSmthg || canTakeBird)) //prendre un objet ou l'oiseau
             {
                 if (!holdSmthg) //si ne porte rien
                 {
-                    heldItem = canBeTakenItem;
-                    heldItem.transform.SetParent(transform);
-                    holdSmthg = true;
+                    if (canTake)
+                    {
+                        heldItem = canBeTakenItem;
+                        heldItem.transform.SetParent(transform);
+                        holdSmthg = true;
+                    }
+                    else if (canTakeBird)
+                    {
+                        holdSmthg = true;
+                        birdReference.transform.position = new Vector3(transform.position.x, transform.position.y + 1f, transform.position.z);
+                        takeIcon.SetActive(false);
+                        birdThrowIcon.SetActive(true);
+                    }
                 }
                 else //si porte quelque chose
                 {
-                    heldItem.transform.position = new Vector3(transform.position.x, transform.position.y - 0.5f, transform.position.z);
-                    heldItem.transform.SetParent(null);
-                    heldItem = null;
-                    holdSmthg = false;
+                    if (heldItem != null) //si porte bien un objet
+                    {
+                        heldItem.transform.position = new Vector3(transform.position.x, transform.position.y - 0.5f, transform.position.z);
+                        heldItem.transform.SetParent(null);
+                        heldItem = null;
+                        holdSmthg = false;
+                    }
+                    else if(birdReference != null)// si porte l'oiseau
+                    {
+                        birdReference.GetComponent<Rigidbody>().AddForce(Vector3.up * throwForce);
+                        birdThrowIcon.SetActive(false);
+                    }
                 }
             }
 
             if (holdSmthg) //adapter position d'un objet tenu en fonction du déplacement
             {
-                heldItem.transform.position = itemPositionGo.transform.position;
+                if (heldItem != null) //si porte bien un objet
+                {
+                    heldItem.transform.position = itemPositionGo.transform.position;
 
-                if (Input.GetAxis(controller.horizontalAxis) > 0)
-                {
-                    itemPositionGo.transform.localPosition = new Vector3(0.75f, -0.25f, 0f);
+                    if (Input.GetAxis(controller.horizontalAxis) > 0)
+                    {
+                        itemPositionGo.transform.localPosition = new Vector3(0.75f, -0.25f, 0f);
+                        heldItem.transform.localEulerAngles = new Vector3(transform.rotation.x, 0f, transform.rotation.z);
+                    }
+                    else if (Input.GetAxis(controller.horizontalAxis) < 0)
+                    {
+                        itemPositionGo.transform.localPosition = new Vector3(-0.75f, -0.25f, 0f);
+                        heldItem.transform.localEulerAngles = new Vector3(transform.rotation.x, -180f, transform.rotation.z);
+                    }
                 }
-                else if (Input.GetAxis(controller.horizontalAxis) < 0)
+            }
+
+            if (canTakeBird) //équivalent moins pété de "OnCollisionExit" relatif à l'oiseau
+            {
+                if (Vector3.Distance(transform.position, birdReference.transform.position) > maxDistanceToTakeBird)
                 {
-                    itemPositionGo.transform.localPosition = new Vector3(-0.75f, -0.25f, 0f);
+                    BirdInteraction(null, false);
+                    holdSmthg = false;
+                    birdThrowIcon.SetActive(false);
                 }
             }
         }
@@ -216,6 +256,13 @@ public class SC_PlayerHuman : PlayerCharacter {
         takeIcon.gameObject.SetActive(isclose);
         canTake = isclose;
         canBeTakenItem = item;
+    }
+
+    void BirdInteraction (GameObject bird, bool isclose) //interaction vis-à-vis de l'oiseau au contact
+    {
+        takeIcon.gameObject.SetActive(isclose);
+        canTakeBird = isclose;
+        birdReference = bird;
     }
 
     private void OnTriggerEnter(Collider c)
@@ -333,12 +380,24 @@ public class SC_PlayerHuman : PlayerCharacter {
         }
         else if (c.gameObject.tag == "Item") //n'est plus au contact d'un objet
         {
-            ItemInteraction(c.gameObject, false);
+            ItemInteraction(null, false);
         }
     }
 
-
-
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (birdReference == null)
+        {
+            if (collision.gameObject.tag == "Player") //au contact de l'oiseau
+            {
+                if (collision.gameObject.name.Contains("Bird"))
+                {
+                    BirdInteraction(collision.gameObject, true);
+                }
+            }
+        }
+    }
+    
     public void SetSlider(GameObject gObj, Transform fill) //Informations envoyées par le slider
     {
         airGauge = gObj;
