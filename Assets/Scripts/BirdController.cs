@@ -173,12 +173,12 @@ public class BirdController : PlayerCharacter
             if (Input.GetAxis(controller.horizontalAxis) > 0)
             {
                 itemPositionGo.transform.localPosition = new Vector3(0.5f, 0f, 0f);
-                heldItem.transform.localEulerAngles = new Vector3(transform.rotation.x, 0f, transform.rotation.z);
+                heldItem.transform.localEulerAngles = new Vector3(-90f, 0f, transform.rotation.z);
             }
             else if (Input.GetAxis(controller.horizontalAxis) < 0)
             {
                 itemPositionGo.transform.localPosition = new Vector3(-0.5f, 0f, 0f);
-                heldItem.transform.localEulerAngles = new Vector3(transform.rotation.x, -180f, transform.rotation.z);
+                heldItem.transform.localEulerAngles = new Vector3(-90f, -180f, transform.rotation.z);
             }
         }
     }
