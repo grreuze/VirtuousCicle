@@ -44,7 +44,6 @@ public class SC_MultiTargetCamera : MonoBehaviour {
                 offset.z += 1;
                 offset.z = Mathf.Min(offset.z, 0);
             }
-            print(camPos);
             if (targets.Count > 1) {
                 currentDistance = distance.Clamp(Vector3.Distance(targets[0].position, targets[1].position) * distanceModifier);
             }
