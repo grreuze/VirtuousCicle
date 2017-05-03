@@ -24,6 +24,7 @@ public class BirdController : PlayerCharacter
     public float jumpHeight;
     public float distFloorForJump;
     [Header("State")]
+    public bool canMove = true;
     public bool oilCovered;
     public Material oilMaterial;
     public bool grounded;
@@ -78,7 +79,7 @@ public class BirdController : PlayerCharacter
 
     void FixedUpdate()
     {
-        if (controller.character != this) return;
+        if (controller.character != this || !canMove) return;
 
         if (Input.GetAxis(controller.verticalAxis) >= 0.5f && !oilCovered) //détection atterrissage
         {

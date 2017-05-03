@@ -9,27 +9,55 @@ public class SC_FadeOutTransition : MonoBehaviour {
     [Header("References")]
     public Image blackOut;
     public GameObject canvas;
+    public bool specificActorTrigged = false;
+    public GameObject ActorTriggerer;
 
     [Header("Tweaking")]
     public float transitionSpeed;
     public bool delayed;
     public float delayDuration;
     public bool addInverseTransition;
+    public bool destroyAtEnd = true;
 
     float progression = 0;
+    bool inTransition;
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.CompareTag("Player"))
+        if (!inTransition)
         {
-            if (delayed)
+            if (!specificActorTrigged)
             {
-                StartCoroutine(Waiting());
+                if (other.gameObject.CompareTag("Player"))
+                {
+                    Begin();
+                }
             }
-            else
+            else if (other.transform.parent != null)
             {
-                StartCoroutine(SmoothTransition());
+                if (other.transform.parent.gameObject == ActorTriggerer) //cas où on veut qu'un acteur précis puisse déclencher l'animation
+                {
+                    Begin();
+                }
             }
+            else if (other.gameObject == ActorTriggerer)
+            {
+                Begin();
+            }
+        }
+    }
+
+    void Begin()
+    {
+        inTransition = true;
+
+        if (delayed)
+        {
+            StartCoroutine(Waiting());
+        }
+        else
+        {
+            StartCoroutine(SmoothTransition());
         }
     }
 
@@ -37,7 +65,6 @@ public class SC_FadeOutTransition : MonoBehaviour {
     {
         for (int i = 0; i < delayDuration; i++)
         {
-            Debug.Log(i);
             yield return new WaitForSeconds(1f);
         }
         StartCoroutine(SmoothTransition());
@@ -63,6 +90,14 @@ public class SC_FadeOutTransition : MonoBehaviour {
             }
             canvas.SetActive(true);
         }
-        Destroy(gameObject);
+
+        if (destroyAtEnd)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            Destroy(this);
+        }
     }
 }

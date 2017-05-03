@@ -35,7 +35,7 @@ public class SetCharacterController : MonoBehaviour {
                     print("Succesfully enabled " + characterToAffect);
                 } else {
                     character.DisableController();
-                    print("Succesfully disabled " + characterToAffect);
+                    //print("Succesfully disabled " + characterToAffect);
                 }
             }
         }

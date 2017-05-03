@@ -126,6 +126,8 @@ public class SC_PlayerHuman : PlayerCharacter {
                     {
                         holdSmthg = true;
                         birdReference.transform.position = new Vector3(transform.position.x, transform.position.y + 1f, transform.position.z);
+                        birdReference.transform.parent = transform;
+                        birdReference.GetComponent<BirdController>().canMove = false;
                         takeIcon.SetActive(false);
                         birdThrowIcon.SetActive(true);
                     }
@@ -141,6 +143,8 @@ public class SC_PlayerHuman : PlayerCharacter {
                     }
                     else if(birdReference != null)// si porte l'oiseau
                     {
+                        birdReference.transform.parent = null;
+                        birdReference.GetComponent<BirdController>().canMove = true;
                         birdReference.GetComponent<Rigidbody>().AddForce(Vector3.up * throwForce);
                         birdThrowIcon.SetActive(false);
                     }
@@ -170,6 +174,8 @@ public class SC_PlayerHuman : PlayerCharacter {
             {
                 if (Vector3.Distance(transform.position, birdReference.transform.position) > maxDistanceToTakeBird)
                 {
+                    birdReference.transform.parent = null;
+                    birdReference.GetComponent<BirdController>().canMove = true;
                     BirdInteraction(null, false);
                     holdSmthg = false;
                     birdThrowIcon.SetActive(false);

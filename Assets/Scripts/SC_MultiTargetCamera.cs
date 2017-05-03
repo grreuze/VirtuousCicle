@@ -32,7 +32,7 @@ public class SC_MultiTargetCamera : MonoBehaviour {
                     obstacle = true;
                     offset.z -= 1;
                 } else if (offset.z != 0 && Physics.Linecast(transform.position + Vector3.forward*5, target.position, out hit) && hit.transform.tag != "Player") {
-                    print("double check succesful");
+                    //print("double check succesful");
                     obstacle = true;
                 }
 
