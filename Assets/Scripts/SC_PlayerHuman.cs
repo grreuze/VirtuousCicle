@@ -209,7 +209,7 @@ public class SC_PlayerHuman : PlayerCharacter {
             }
             else
             {
-                rb.AddForce(0, 40 * jumpHeight, 0);
+                rb.AddForce(0, 50 * jumpHeight, 0);
             }
         }
         

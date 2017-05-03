@@ -153,7 +153,22 @@ public class FloatingController : PlayerCharacter {
         }
         else
         {
-            rb.AddForce(transform.forward * acceleration);
+            if (!isHungry)
+            {
+                if (isInWater)
+                {
+                    rb.AddForce(transform.forward * acceleration);
+                }
+                else
+                {
+                    rb.AddForce(transform.forward * acceleration * 0.85f);
+                }
+
+            }
+            else
+            {
+                rb.AddForce(transform.forward * acceleration * 0.01f);
+            }
         }
     }
 
