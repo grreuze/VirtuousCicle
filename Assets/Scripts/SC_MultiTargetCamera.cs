@@ -10,21 +10,24 @@ public class SC_MultiTargetCamera : MonoBehaviour {
                  smooth = 2,
                  distanceModifier = 1.5f;
 
+    Vector3 zero;
     Transform my;
 
     void Start() {
         my = transform;
         offset.z = 0;
+        zero = new Vector3(0, 0, 0);
     }
 
     void Update() {
-        Vector3 camPos = offset;
+        Vector3 camPos = zero;
         if (targets.Count > 0) {
             bool obstacle = false;
             foreach (Transform target in targets) {
                 camPos += target.position;
 
                 RaycastHit hit;
+                Debug.DrawLine(transform.position, target.position, Color.green);
                 if (Physics.Linecast(transform.position, target.position, out hit) && hit.transform.tag != "Player") {
                     obstacle = true;
                     offset.z -= 1;
@@ -36,11 +39,12 @@ public class SC_MultiTargetCamera : MonoBehaviour {
 
             }
             camPos /= targets.Count;
+            camPos += offset;
             if (!obstacle && offset.z < 0) {
                 offset.z += 1;
                 offset.z = Mathf.Min(offset.z, 0);
             }
-
+            print(camPos);
             if (targets.Count > 1) {
                 currentDistance = distance.Clamp(Vector3.Distance(targets[0].position, targets[1].position) * distanceModifier);
             }
