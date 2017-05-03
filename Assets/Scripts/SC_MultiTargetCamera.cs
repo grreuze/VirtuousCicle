@@ -31,7 +31,6 @@ public class SC_MultiTargetCamera : MonoBehaviour {
                 if (Physics.Linecast(transform.position, target.position, out hit) && hit.transform.tag != "Player") {
                     obstacle = true;
                     offset.z -= 1;
-                    print(hit.transform.name + " entre caméra et " + target);
                 } else if (offset.z != 0 && Physics.Linecast(transform.position + Vector3.forward*5, target.position, out hit) && hit.transform.tag != "Player") {
                     print("double check succesful");
                     obstacle = true;
